@@ -1,0 +1,29 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Java / Gradle
+spring-backend/.gradle/
+spring-backend/build/
+spring-backend/bin/
+*.class
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Python
+ai-service/.venv/
+ai-service/__pycache__/
+ai-service/**/__pycache__/
+ai-service/app/models/*.joblib
+*.py[cod]
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local service logs
+logs-*.txt

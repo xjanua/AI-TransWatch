@@ -1,0 +1,77 @@
+# AI-TransWatch — chạy toàn bộ hệ thống bằng Docker Compose.
+#
+#   docker compose up --build
+#
+# Sau khi khởi động:
+#   - Giao diện:  http://localhost:8081
+#   - API:        http://localhost:8081/api/health (qua nginx) hoặc http://localhost:8080/api/health
+#   - AI service: http://localhost:8000/health
+#
+# LƯU Ý: cấu hình này chưa được kiểm chứng trong môi trường phát triển hiện tại vì máy không cài
+# Docker. Hãy kiểm tra lại trước khi dùng cho báo cáo/bảo vệ, và không dùng mật khẩu mặc định
+# trong môi trường thật.
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_transwatch}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./spring-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_transwatch}
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      # Bắt buộc đổi trước khi dùng ngoài môi trường demo.
+      JWT_BASE64_SECRET: ${JWT_BASE64_SECRET:-Y2hhbmdlLXRoaXMtc2VjcmV0LWJlZm9yZS1kZXBsb3lpbmctcHJvZA==}
+      JWT_ACCESS_TOKEN_VALIDITY_IN_SECONDS: 3600
+      FRONTEND_ALLOWED_ORIGINS: http://localhost:8081,http://localhost:5173
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "8081:80"
+
+volumes:
+  mysql-data:
