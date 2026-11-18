@@ -12,11 +12,13 @@ spring-backend/bin/
 # Node
 frontend/node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 # Python
 ai-service/.venv/
 ai-service/__pycache__/
 ai-service/**/__pycache__/
+ai-service/.pytest_cache/
 ai-service/app/models/*.joblib
 *.py[cod]
 
